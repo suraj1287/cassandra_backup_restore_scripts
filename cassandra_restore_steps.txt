@@ -1,0 +1,48 @@
+Restore:
+
+#login:
+
+az aks get-credentials --resource-group myapp-dl --name myapp-cass-aks --overwrite-existing
+kubectl get pod
+kubectl cp /home/dspg/myapp-test-data/ myapp-backend-cassandra-6bffcb6c4-2fkc2:/home/
+kubectl exec -it myapp-backend-cassandra-6bffcb6c4-2fkc2 -- /bin/bash
+cd /home/
+tar -xvf backup.tar.gz
+cd /home/myapp-test-data/var/lib/cassandra/data/myapp
+
+#to verify snapshots for single table one by one:
+
+ls -d /home/myapp-test-data/var/lib/cassandra/data/myapp/*/snapshots/mybackup1
+/home/myapp-test-data/var/lib/cassandra/data/myapp/abc-64cffd101a7c11e9ab97ef8d12218189/snapshots/mybackup1
+
+#restore keyspace and blank table structure:
+
+cqlsh -e "SOURCE 'myapp.cql'";
+
+#copy files into original location:
+
+cp /home/myapp-test-data/var/lib/cassandra/data/myapp/def-6815d9401a7c11e9ab97ef8d12218189/snapshots/mybackup1/* /var/lib/cassandra/data/myapp/def-a6bab2c0461d11e9985cf9f82ea3ea1e/
+cp /home/myapp-test-data/var/lib/cassandra/data/myapp/ghi-75152e201a7c11e9ab97ef8d12218189/snapshots/mybackup1/* /var/lib/cassandra/data/myapp/ghi-ac7b2be0461d11e9985cf9f82ea3ea1e/
+cp /home/myapp-test-data/var/lib/cassandra/data/myapp/emp-3a74a2a01a7c11e9ab97ef8d12218189/snapshots/mybackup1/* /var/lib/cassandra/data/myapp/emp-ba38c7b0461d11e9985cf9f82ea3ea1e/
+
+
+#import using sstableloader utility
+
+nodetool status
+
+replace ip in below command
+
+sstableloader --nodes 10.244.2.3 --verbose /var/lib/cassandra/data/myapp/abc-c37c9b30461d11e9985cf9f82ea3ea1e/
+sstableloader --nodes 10.244.2.3 --verbose /var/lib/cassandra/data/myapp/def-a6bab2c0461d11e9985cf9f82ea3ea1e/
+sstableloader --nodes 10.244.2.3 --verbose /var/lib/cassandra/data/myapp/ghi-ac7b2be0461d11e9985cf9f82ea3ea1e/
+sstableloader --nodes 10.244.2.3 --verbose /var/lib/cassandra/data/myapp/emp-ba38c7b0461d11e9985cf9f82ea3ea1e/
+
+
+#verify count of all tables:
+
+select count(*) from abc;
+select count(*) from def;
+select count(*) from ghi;
+select count(*) from emp;
+
+
